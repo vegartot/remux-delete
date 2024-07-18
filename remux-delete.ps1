@@ -49,13 +49,14 @@ foreach ($file in $files)
     $fileSizeDelta = [System.Math]::Abs($file.Length - $files[$index].Length)
     if ($fileSizeDelta / $file.Length -gt 0.01)
     {
-      Write-Host "Remux too small" $file.FullName $files[$index].FullName
+      Write-Host "Remux too small:" $files[$index].FullName
       [System.IO.File]::Delete($files[$index].FullName)
     }
     else
     {
       # Found corresponding .mp4 file of similar size
       # Delete original and jump to next loop iteration
+      Write-Host "Deleting already remuxed:" $file.FullName
       [System.IO.File]::Delete($file)
       Continue
     }
@@ -64,9 +65,9 @@ foreach ($file in $files)
   # If remuxed file is not found start remux
   try
   {
-    Write-Host "Starting Remux: " $file.FullName " ==> " $remuxedFile
+    Write-Host "Starting Remux:" $file.FullName "==>" $remuxedFile
     ffmpeg.exe -hide_banner -loglevel warning -stats -i $file.FullName -c copy -map 0 $remuxedFile | Out-Null
-    Write-Host "Remux complete"
+    Write-Host "Remux complete."
   }
   catch
   {
