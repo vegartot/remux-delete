@@ -37,6 +37,7 @@ for ($i = 0; $i -lt $files.Count; $i++)
 
 foreach ($file in $files)
 {
+
   if ($file.extension -ne ".mkv") {continue}
 
   $remuxedFile = [System.String]::Concat($file.FullName.Substring(0, $file.FullName.LastIndexOf(".")), ".mp4")
@@ -60,23 +61,27 @@ foreach ($file in $files)
       [System.IO.File]::Delete($file)
       Continue
     }
-  }
-
-  # If remuxed file is not found start remux
-  try
-  {
-    Write-Host "Starting Remux:" $file.FullName "==>" $remuxedFile
-    ffmpeg.exe -hide_banner -loglevel warning -stats -i $file.FullName -c copy -map 0 $remuxedFile | Out-Null
-    Write-Host "Remux complete."
-  }
-  catch
-  {
-    Continue
-  }
-  finally
-  {
-    # Formatting
     Write-Host ""
   }
 
+  # If remuxed file is not found start remux
+  Write-Host "Starting remux: " $file.FullName "===>" $files[$index].FullName
+  ffmpeg.exe -hide_banner -loglevel error -xerror -stats -i $file.FullName -c copy -map 0 $remuxedFile
+
+  if ($LASTEXITCODE -eq 0)
+  {
+    Write-Host "Remux complete."
+  }
+
+  else 
+  {
+    Write-Host "FFMPEG error - return code:" $LASTEXITCODE
+    exit
+  }
+ 
+  # Formatting
+  Write-Host ""
+
 }
+
+Write-Host "No more work to do."
