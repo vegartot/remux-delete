@@ -1,5 +1,8 @@
-
 #######################################################
+# 
+# Filename: remux-delete.ps1
+# Author: Vegard Totland
+#
 # This script will check the specified folders for
 # mkv files. If there exists a duplicate file with
 # an .mp4 extension it deletes the .mkv file.
@@ -9,6 +12,7 @@
 # Use Task Scheduler to schedule this task to
 # make this process automatic. Or run the script
 # manually when needed.
+#
 #######################################################
 
 # Folders to search
