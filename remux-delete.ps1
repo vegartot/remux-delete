@@ -11,13 +11,11 @@
 # manually when needed.
 #######################################################
 
-
-
-
 # Folders to search
 [System.String[]] $folders = (
   "E:\4k Recordings",
   "E:\VODs"
+  # Add folders in fullpath
 )
 
 [System.Collections.ArrayList] $files = [System.Collections.ArrayList]::new()
@@ -72,6 +70,7 @@ foreach ($file in $files)
   }
   finally
   {
+    # Formatting
     Write-Host ""
   }
 
