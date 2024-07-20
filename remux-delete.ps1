@@ -13,75 +13,107 @@
 # make this process automatic. Or run the script
 # manually when needed.
 #
+# TODO: Add process instead of directly calling ffmpeg.exe
+#
+#
 #######################################################
+
+
 
 # Folders to search
 [System.String[]] $folders = (
-  "E:\4k Recordings",
-  "E:\VODs"
-  # Add folders in fullpath
+  
+  "E:\4k Recordings"
+
+  # Add folders in fullpath and quotation separated by comma
+  # For example:
+  
+  # "$HOME\Videos\",
+  # "D:\Recordings"
 )
 
+#Array to contain all files
 [System.Collections.ArrayList] $files = [System.Collections.ArrayList]::new()
 
+# Add all files with .mkv and .mp4 extensions
 foreach ($folder in $folders)
 {
-  $files += [System.IO.Directory]::GetFiles($folder, "*.mkv")
-  $files += [System.IO.Directory]::GetFiles($folder, "*.mp4")
+  if ([System.IO.Directory]::Exists($folder))
+  {
+    $files += [System.IO.Directory]::GetFiles($folder, "*.mkv")
+    $files += [System.IO.Directory]::GetFiles($folder, "*.mp4")
+  }
+  else
+  {
+    # If a certain folder specified cannot be found
+    Write-Host "WARNING: failed to locate provided folder: '$folder' `n"
+  }
 }
 
+# Initalize indices as FileInfo objects
 for ($i = 0; $i -lt $files.Count; $i++)
 {
   $files[$i] = [System.IO.FileInfo]::new($files[$i])
 }
 
-foreach ($file in $files)
+# Keep looping file buffer untill all .mkv files have been remuxed and deleted
+while ($files.Where({$_.extension -eq ".mkv"}))
 {
 
-  if ($file.extension -ne ".mkv") {continue}
-
-  $remuxedFile = [System.String]::Concat($file.FullName.Substring(0, $file.FullName.LastIndexOf(".")), ".mp4")
-  $index = $files.ToArray().FullName.IndexOf($remuxedFile)
-
-  # If remux file found -> check file size
-  if ( $index -ne -1)
+  foreach ($file in $files.Where({$_.extension -eq ".mkv"}))
   {
-    
-    $fileSizeDelta = [System.Math]::Abs($file.Length - $files[$index].Length)
-    if ($fileSizeDelta / $file.Length -gt 0.01)
+    # Check if matching filename is in file buffer and query it's index
+    # Returns -1 if not found, otherwise an index >= 0
+    $remuxedFile = [System.String]::Concat($file.FullName.Substring(0, $file.FullName.LastIndexOf(".")), ".mp4")
+    $index = $files.FullName.IndexOf($remuxedFile)
+
+    # If remux file found -> check if file size is similar
+    if ($index -ne -1)
     {
-      Write-Host "Remux too small:" $files[$index].FullName
-      [System.IO.File]::Delete($files[$index].FullName)
+
+      # NOTE: Defined bias .. filesize is within 1% of original file.
+      #       If not, assume remux got stopped prematurely or corrupted.
+      #       Might need to be tweaked if a previously remuxed clip
+      #       has a deviation greater than 1%. Although a 1:1 copied
+      #       remux should fall within this margin.
+
+      $fileSizeDelta = [System.Math]::Abs($file.Length - $files[$index].Length)
+      if ($fileSizeDelta / $file.Length -gt 0.01)
+      {
+        Write-Host "Remux too small:" $files[$index].FullName
+        [System.IO.File]::Delete($files[$index].FullName)
+      }
+      else
+      {
+        # Found corresponding .mp4 file of similar size
+        # Delete original and break out of for-each loop
+        Write-Host "Deleting original:" $file.FullName "`n"
+        [System.IO.File]::Delete($file)
+        $files[$files.IndexOf($file)] = $null
+        $files[$files.FullName.IndexOf($remuxedFile)] | Out-Null
+        break
+      }
     }
-    else
+    # If remuxed file is not found start remux
+    Write-Host "Starting remux: " $file.FullName "===>" $files[$index].FullName
+    & ffmpeg.exe -hide_banner -loglevel error -xerror -stats -i $file.FullName -c copy -map 0 $remuxedFile
+      
+    if ($LASTEXITCODE -eq 0)
     {
-      # Found corresponding .mp4 file of similar size
-      # Delete original and jump to next loop iteration
-      Write-Host "Deleting already remuxed:" $file.FullName
-      [System.IO.File]::Delete($file)
-      Continue
+      # Exit 0 on success
+      # Add remux file to buffer and start all over
+      Write-Host "Remux complete."
+      $files.Add([System.IO.FileInfo]::new($remuxedFile)) | Out-Null
+      break
     }
-    Write-Host ""
+      
+    else 
+    {
+      # FFMPEG exited with non-zero
+      Write-Host "FFMPEG error - return code:" $LASTEXITCODE
+      exit
+    }
   }
-
-  # If remuxed file is not found start remux
-  Write-Host "Starting remux: " $file.FullName "===>" $files[$index].FullName
-  ffmpeg.exe -hide_banner -loglevel error -xerror -stats -i $file.FullName -c copy -map 0 $remuxedFile
-
-  if ($LASTEXITCODE -eq 0)
-  {
-    Write-Host "Remux complete."
-  }
-
-  else 
-  {
-    Write-Host "FFMPEG error - return code:" $LASTEXITCODE
-    exit
-  }
- 
-  # Formatting
-  Write-Host ""
-
 }
 
 Write-Host "No more work to do."
