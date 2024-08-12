@@ -1,7 +1,6 @@
 #######################################################
 # 
 # Filename: remux-delete.ps1
-# Author: Vegard Totland
 #
 # This script will check the specified folders for
 # mkv files. If there exists a duplicate file with
@@ -11,10 +10,12 @@
 #
 # Use Task Scheduler to schedule this task to
 # make this process automatic. Or run the script
-# manually when needed.
+# manually when needed. 
 #
-# TODO: Add process instead of directly calling ffmpeg.exe
-#
+# After adding desired folders, save this file and
+# simply run the .bat file to execute this script
+# and bypass powershell's default execution
+# policy.
 #
 #######################################################
 
@@ -23,11 +24,11 @@
 # Folders to search
 [System.String[]] $folders = (
   
-  "E:\4k Recordings"
+  "C:\Users\"
 
   # Add folders in fullpath and quotation separated by comma
   # For example:
-  
+  # 
   # "$HOME\Videos\",
   # "D:\Recordings"
 )
